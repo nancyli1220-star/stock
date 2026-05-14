@@ -1,0 +1,447 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>每日選股指南 · 官方API版</title>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@300;400;500;700;900&family=JetBrains+Mono:wght@400;600;700&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #0a0c10; --bg2: #0f1318; --bg3: #141920; --bg4: #1a2030;
+  --border: rgba(255,255,255,0.07); --border2: rgba(255,255,255,0.12);
+  --accent: #f0b429; --green: #30c97e; --red: #f05252; --blue: #4fa3f7;
+  --orange: #f0824e; --purple: #b568f5; --muted: #5a6478;
+  --text: #e8ecf4; --text2: #8a95a8; --text3: #b8c0d0;
+}
+* { margin:0; padding:0; box-sizing:border-box; }
+body { background: var(--bg); color: var(--text); font-family: 'Noto Sans TC', sans-serif; font-size: 13px; min-height: 100vh; }
+button, input { font-family: inherit; }
+
+.topbar { background: var(--bg2); border-bottom: 1px solid var(--border); padding: 14px 16px; display: flex; align-items: center; justify-content: space-between; position: sticky; top: 0; z-index: 100; gap: 8px; flex-wrap: wrap; }
+.logo { display: flex; align-items: center; gap: 10px; }
+.logo-icon { width: 36px; height: 36px; background: linear-gradient(135deg, var(--accent), #e07b29); border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 18px; }
+.logo-text { font-size: 16px; font-weight: 700; }
+.logo-sub { font-size: 10px; color: var(--muted); }
+.topbar-right { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+.refresh-btn { background: var(--accent); color: #000; border: none; border-radius: 6px; padding: 8px 14px; font-size: 12px; font-weight: 700; display: flex; align-items: center; gap: 6px; white-space: nowrap; cursor: pointer; }
+.refresh-btn:disabled { opacity: 0.5; cursor: wait; }
+.refresh-btn .spin { display: inline-block; }
+.refresh-btn.loading .spin { animation: spin 1s linear infinite; }
+@keyframes spin { from{transform:rotate(0)} to{transform:rotate(360deg)} }
+.update-time { background: rgba(48,201,126,0.1); border: 1px solid rgba(48,201,126,0.3); border-radius: 6px; padding: 5px 10px; font-size: 11px; color: var(--green); font-family: 'JetBrains Mono', monospace; }
+.update-time.stale { background: rgba(240,82,82,0.1); border-color: rgba(240,82,82,0.3); color: var(--red); }
+
+.banner { padding: 8px 16px; font-size: 12px; display: flex; align-items: center; gap: 10px; }
+.banner.loading { background: rgba(79,163,247,0.08); border-bottom: 1px solid rgba(79,163,247,0.2); color: var(--blue); }
+.banner.success { background: rgba(48,201,126,0.08); border-bottom: 1px solid rgba(48,201,126,0.25); color: var(--green); }
+.banner.error { background: rgba(240,82,82,0.08); border-bottom: 1px solid rgba(240,82,82,0.25); color: var(--red); }
+
+.hero { padding: 18px 16px; background: linear-gradient(135deg, #0f1820, #0a1015); border-bottom: 1px solid var(--border); }
+.hero-title { font-size: 11px; font-weight: 700; letter-spacing: 0.15em; text-transform: uppercase; color: var(--accent); margin-bottom: 14px; display: flex; align-items: center; gap: 8px; }
+.hero-title::before { content: ''; width: 3px; height: 14px; background: var(--accent); border-radius: 2px; }
+.top-recs { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+@media (max-width: 900px) { .top-recs { grid-template-columns: 1fr; } }
+.rec-panel { background: var(--bg3); border: 1px solid var(--border); border-radius: 12px; padding: 14px 16px; }
+.rec-panel.strong { border-color: rgba(240,82,82,0.3); background: linear-gradient(135deg, rgba(240,82,82,0.05), var(--bg3)); }
+.rec-panel.daytrade { border-color: rgba(240,130,78,0.3); background: linear-gradient(135deg, rgba(240,130,78,0.05), var(--bg3)); }
+.rec-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; padding-bottom: 8px; border-bottom: 1px solid var(--border); }
+.rec-type { font-size: 13px; font-weight: 700; display: flex; gap: 6px; align-items: center; }
+.rec-type.strong { color: var(--red); }
+.rec-type.dt { color: var(--orange); }
+.rec-count { font-size: 10px; color: var(--muted); font-family: 'JetBrains Mono', monospace; }
+.rec-list { display: flex; flex-direction: column; gap: 6px; }
+.rec-item { display: grid; grid-template-columns: 24px 1fr auto auto; gap: 10px; align-items: center; padding: 9px 12px; background: rgba(255,255,255,0.02); border-radius: 6px; border: 1px solid var(--border); }
+.rec-rank { width: 22px; height: 22px; background: var(--bg4); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 700; color: var(--text2); font-family: 'JetBrains Mono', monospace; }
+.rec-rank.r1 { background: var(--accent); color: #000; }
+.rec-name { font-size: 14px; font-weight: 700; }
+.rec-meta { font-size: 10px; color: var(--muted); margin-top: 2px; }
+.rec-score { font-family: 'JetBrains Mono', monospace; font-size: 14px; font-weight: 700; padding: 3px 9px; background: rgba(240,180,41,0.15); color: var(--accent); border-radius: 4px; border: 1px solid rgba(240,180,41,0.3); }
+.rec-action { font-size: 10px; color: var(--text3); background: var(--bg4); padding: 3px 8px; border-radius: 4px; white-space: nowrap; font-family: 'JetBrains Mono', monospace; }
+.rec-empty { padding: 20px; text-align: center; color: var(--muted); font-size: 12px; background: rgba(255,255,255,0.02); border-radius: 6px; border: 1px dashed var(--border2); }
+.main { padding: 18px 16px; }
+
+.stats-row { display: grid; grid-template-columns: repeat(5, 1fr); gap: 10px; margin-bottom: 16px; }
+@media (max-width: 700px) { .stats-row { grid-template-columns: repeat(3, 1fr); } }
+@media (max-width: 480px) { .stats-row { grid-template-columns: repeat(2, 1fr); } }
+.stat-card { background: var(--bg3); border: 1px solid var(--border); border-radius: 8px; padding: 10px 12px; }
+.stat-val { font-family: 'JetBrains Mono', monospace; font-size: 22px; font-weight: 700; line-height: 1; }
+.stat-lab { font-size: 10px; color: var(--muted); margin-top: 4px; }
+
+.section-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; flex-wrap: wrap; gap: 10px; }
+.section-title { font-size: 11px; font-weight: 700; letter-spacing: 0.15em; text-transform: uppercase; color: var(--muted); }
+.controls { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+.filter-tabs { display: flex; gap: 3px; background: var(--bg3); border: 1px solid var(--border); border-radius: 8px; padding: 3px; flex-wrap: wrap; }
+.tab { padding: 5px 11px; border-radius: 6px; font-size: 11px; font-weight: 600; color: var(--muted); border: none; background: none; cursor: pointer; }
+.tab.active { background: var(--accent); color: #000; }
+.search-input { background: var(--bg3); border: 1px solid var(--border); color: var(--text); border-radius: 6px; padding: 5px 10px; font-size: 12px; width: 160px; }
+.search-input:focus { outline: none; border-color: var(--accent); }
+
+.table-wrap { background: var(--bg2); border: 1px solid var(--border); border-radius: 10px; overflow: auto; max-height: 65vh; }
+.stock-table { width: 100%; border-collapse: separate; border-spacing: 0; min-width: 1100px; }
+.stock-table thead { position: sticky; top: 0; z-index: 10; background: var(--bg2); }
+.stock-table thead th { font-size: 10px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: var(--muted); padding: 10px 10px; text-align: right; white-space: nowrap; border-bottom: 1px solid var(--border2); background: var(--bg2); }
+.stock-table thead th.left { text-align: left; }
+.stock-table thead th:first-child { padding-left: 14px; }
+.stock-table thead th.sortable { cursor: pointer; user-select: none; }
+.stock-table thead th.sortable:hover { color: var(--text); }
+.stock-table thead th .sort-arrow { color: var(--accent); margin-left: 3px; }
+.stock-table tbody tr { border-bottom: 1px solid var(--border); }
+.stock-table tbody tr:hover { background: var(--bg4); }
+.stock-table tbody tr.priority { background: rgba(240,180,41,0.04); }
+.stock-table tbody tr.priority:hover { background: rgba(240,180,41,0.08); }
+.stock-table tbody td { padding: 10px 10px; font-size: 12px; vertical-align: middle; white-space: nowrap; text-align: right; }
+.stock-table tbody td.left { text-align: left; }
+.stock-table tbody td:first-child { padding-left: 14px; }
+.cell-name { display: flex; flex-direction: column; gap: 2px; }
+.cell-name .name { font-size: 13px; font-weight: 700; }
+.cell-name .code { font-family: 'JetBrains Mono', monospace; font-size: 9px; color: var(--muted); }
+.num { font-family: 'JetBrains Mono', monospace; font-weight: 600; }
+.pos { color: var(--red); }
+.neg { color: var(--green); }
+.zero { color: var(--muted); }
+.score-badge { display: inline-flex; align-items: center; justify-content: center; min-width: 32px; height: 26px; padding: 0 6px; border-radius: 6px; font-family: 'JetBrains Mono', monospace; font-weight: 700; font-size: 13px; }
+.s-10 { background: rgba(240,82,82,0.22); color: var(--red); border: 1px solid rgba(240,82,82,0.45); }
+.s-8 { background: rgba(240,180,41,0.22); color: var(--accent); border: 1px solid rgba(240,180,41,0.4); }
+.s-6 { background: rgba(48,201,126,0.12); color: var(--green); border: 1px solid rgba(48,201,126,0.3); }
+.s-low { background: rgba(90,100,120,0.12); color: var(--muted); border: 1px solid var(--border2); }
+.tag { display: inline-block; border-radius: 4px; padding: 2px 7px; font-size: 10px; font-weight: 600; }
+.tag-buy { background: rgba(240,180,41,0.15); color: var(--accent); border: 1px solid rgba(240,180,41,0.3); }
+.tag-watch { background: rgba(79,163,247,0.1); color: var(--blue); border: 1px solid rgba(79,163,247,0.25); }
+.tag-skip { background: rgba(90,100,120,0.12); color: var(--muted); border: 1px solid rgba(90,100,120,0.2); }
+.tag-strong { background: rgba(240,82,82,0.15); color: var(--red); border: 1px solid rgba(240,82,82,0.3); }
+.tag-dt { background: rgba(240,130,78,0.15); color: var(--orange); border: 1px solid rgba(240,130,78,0.3); }
+.warn { font-size: 9px; padding: 1px 5px; border-radius: 3px; font-weight: 600; }
+.w-shadow { background: rgba(240,180,41,0.1); color: var(--accent); border: 1px solid rgba(240,180,41,0.2); }
+.w-limit { background: rgba(240,130,41,0.1); color: var(--orange); border: 1px solid rgba(240,130,41,0.2); }
+.toast { position: fixed; bottom: 20px; right: 20px; background: var(--bg3); border: 1px solid var(--border2); border-radius: 8px; padding: 10px 16px; font-size: 12px; z-index: 1000; box-shadow: 0 4px 20px rgba(0,0,0,0.5); transform: translateY(80px); opacity: 0; transition: all 0.3s; max-width: 320px; }
+.toast.show { transform: translateY(0); opacity: 1; }
+.toast.success { border-color: var(--green); color: var(--green); }
+.toast.error { border-color: var(--red); color: var(--red); }
+.info-box { background: var(--bg2); border: 1px solid var(--border); border-radius: 8px; padding: 12px 14px; margin-bottom: 14px; font-size: 11px; color: var(--text2); line-height: 1.6; }
+.info-box b { color: var(--accent); }
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <div class="logo">
+    <div class="logo-icon">📊</div>
+    <div>
+      <div class="logo-text">每日選股指南</div>
+      <div class="logo-sub">證交所官方 API · 全市場掃描</div>
+    </div>
+  </div>
+  <div class="topbar-right">
+    <div class="update-time" id="updateTime">未更新</div>
+    <button class="refresh-btn" id="refreshBtn" onclick="refresh()"><span class="spin">🔄</span> 重新抓取</button>
+  </div>
+</div>
+
+<div class="banner" id="banner" style="display:none"></div>
+
+<div class="hero">
+  <div class="hero-title">今日交易推薦</div>
+  <div class="top-recs">
+    <div class="rec-panel strong">
+      <div class="rec-header"><div class="rec-type strong">⭐ 強勢候選</div><div class="rec-count" id="strongCount">— 檔</div></div>
+      <div class="rec-list" id="strongList"></div>
+    </div>
+    <div class="rec-panel daytrade">
+      <div class="rec-header"><div class="rec-type dt">🔥 隔日沖優選</div><div class="rec-count" id="dtCount">— 檔</div></div>
+      <div class="rec-list" id="dtList"></div>
+    </div>
+  </div>
+</div>
+<div class="main">
+
+  <div class="info-box">
+    💡 <b>資料來源：證交所官方 OpenAPI</b>（盤後 18:00 後當日資料）。涵蓋全市場上市股票，無需代理。<b>離高點%</b> = (當日最高 - 收盤) / 最高，越小越強勢；<b>振幅%</b> = (高-低) / 昨收。
+  </div>
+
+  <div class="stats-row">
+    <div class="stat-card"><div class="stat-val" id="stTotal" style="color:var(--text)">—</div><div class="stat-lab">全市場檔數</div></div>
+    <div class="stat-card"><div class="stat-val" id="stUp" style="color:var(--red)">—</div><div class="stat-lab">上漲</div></div>
+    <div class="stat-card"><div class="stat-val" id="stDown" style="color:var(--green)">—</div><div class="stat-lab">下跌</div></div>
+    <div class="stat-card"><div class="stat-val" id="stStrong" style="color:var(--red)">—</div><div class="stat-lab">強勢(評分≥8)</div></div>
+    <div class="stat-card"><div class="stat-val" id="stDT" style="color:var(--orange)">—</div><div class="stat-lab">隔日沖標的</div></div>
+  </div>
+
+  <div class="section-header">
+    <div class="section-title">📋 全市場清單（依評分排序）</div>
+    <div class="controls">
+      <input type="text" class="search-input" id="searchInput" placeholder="搜尋名稱/代號" oninput="renderTable()">
+      <div class="filter-tabs">
+        <button class="tab active" data-f="all" onclick="setFilter(this)">全部</button>
+        <button class="tab" data-f="strong" onclick="setFilter(this)">強勢</button>
+        <button class="tab" data-f="dt" onclick="setFilter(this)">隔日沖</button>
+        <button class="tab" data-f="rise" onclick="setFilter(this)">上漲</button>
+        <button class="tab" data-f="big" onclick="setFilter(this)">大漲≥5%</button>
+        <button class="tab" data-f="limit" onclick="setFilter(this)">漲停近</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="table-wrap">
+    <table class="stock-table">
+      <thead>
+        <tr>
+          <th class="left">股票</th>
+          <th class="sortable" data-sort="closingPrice">收盤</th>
+          <th class="sortable" data-sort="changePct">漲幅%</th>
+          <th class="sortable" data-sort="highGap">離高%</th>
+          <th class="sortable" data-sort="amplitude">振幅%</th>
+          <th class="sortable" data-sort="openingPrice">開盤</th>
+          <th class="sortable" data-sort="highestPrice">最高</th>
+          <th class="sortable" data-sort="lowestPrice">最低</th>
+          <th class="sortable" data-sort="tradeVolume">成交量</th>
+          <th class="sortable" data-sort="score">評分</th>
+          <th>結論</th>
+          <th>隔日沖</th>
+          <th>停損</th>
+          <th>目標</th>
+          <th>警示</th>
+        </tr>
+      </thead>
+      <tbody id="tableBody"></tbody>
+    </table>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+let stockData = [];
+let currentFilter = 'all';
+let currentSort = { key: 'score', dir: 'desc' };
+
+async function fetchAllStocks() {
+  const url = 'https://openapi.twse.com.tw/v1/exchangeReport/STOCK_DAY_ALL';
+  const r = await fetch(url);
+  if (!r.ok) throw new Error('HTTP ' + r.status);
+  return await r.json();
+}
+
+async function fetchAllOTC() {
+  try {
+    const url = 'https://www.tpex.org.tw/openapi/v1/tpex_mainboard_daily_close_quotes';
+    const r = await fetch(url);
+    if (!r.ok) return [];
+    return await r.json();
+  } catch (e) {
+    return [];
+  }
+}
+
+function analyze(stock) {
+  const code = (stock.Code || stock.SecuritiesCompanyCode || '').trim();
+  const name = (stock.Name || stock.CompanyName || '').trim();
+  const open = parseFloat(stock.OpeningPrice) || 0;
+  const high = parseFloat(stock.HighestPrice) || 0;
+  const low = parseFloat(stock.LowestPrice) || 0;
+  const close = parseFloat(stock.ClosingPrice || stock.Close) || 0;
+  const change = parseFloat(stock.Change) || 0;
+  const volume = parseInt(stock.TradeVolume) || 0;
+  const transaction = parseInt(stock.Transaction) || 0;
+
+  if (close <= 0 || volume <= 0) return null;
+  if (!code || !/^\d{4,6}$/.test(code)) return null;
+  if (code.startsWith('00') && code.length === 4) return null;
+  
+  const yesterday = close - change;
+  const changePct = yesterday > 0 ? change / yesterday : 0;
+  const highGap = high > 0 ? (high - close) / high : 0;
+  const lowGap = close > 0 ? (close - low) / close : 0;
+  const amplitude = yesterday > 0 ? (high - low) / yesterday : 0;
+  const upperShadow = high > close ? (high - close) / close : 0;
+  
+  let score = 0;
+  if (changePct >= 0.07) score += 3;
+  else if (changePct >= 0.05) score += 2;
+  else if (changePct >= 0.03) score += 1.5;
+  else if (changePct >= 0.01) score += 1;
+  
+  if (highGap <= 0.005) score += 3;
+  else if (highGap <= 0.01) score += 2.5;
+  else if (highGap <= 0.02) score += 2;
+  else if (highGap <= 0.03) score += 1;
+  
+  if (close > open) {
+    const bodyPct = (close - open) / open;
+    if (bodyPct >= 0.03) score += 2;
+    else if (bodyPct >= 0.01) score += 1.5;
+    else score += 1;
+  }
+  
+  if (volume >= 5000000) score += 2;
+  else if (volume >= 1000000) score += 1.5;
+  else if (volume >= 500000) score += 1;
+  
+  if (score > 10) score = 10;
+  score = Math.round(score * 10) / 10;
+  
+  let conclusion = '不買';
+  if (score >= 8 && changePct > 0 && highGap <= 0.02) conclusion = '優先候選';
+  else if (score >= 6 && changePct > 0) conclusion = '可觀察';
+  
+  const warns = [];
+  if (upperShadow >= 0.03 && changePct > 0) warns.push('shadow');
+  if (changePct >= 0.095) warns.push('limit');
+  
+  const dt = (
+    changePct >= 0.03 && changePct < 0.095 &&
+    highGap <= 0.02 &&
+    close > open &&
+    !warns.includes('shadow') &&
+    score >= 7
+  );
+  
+  const stopPrice = close * 0.98;
+  const targetPrice = close * 1.03;
+  
+  return {
+    code, name, open, high, low,
+    closingPrice: close,
+    change, changePct, highGap, amplitude,
+    openingPrice: open, highestPrice: high, lowestPrice: low,
+    tradeVolume: volume, transaction,
+    upperShadow,
+    score, conclusion, warns, dt,
+    stopPrice, targetPrice,
+  };
+}
+async function refresh() {
+  const btn = document.getElementById('refreshBtn');
+  btn.classList.add('loading');
+  btn.disabled = true;
+  const banner = document.getElementById('banner');
+  banner.style.display = 'flex';
+  banner.className = 'banner loading';
+  banner.innerHTML = '📡 抓取全市場資料中...（單次請求，約 3-5 秒）';
+
+  try {
+    const [tseData, otcData] = await Promise.all([
+      fetchAllStocks(),
+      fetchAllOTC()
+    ]);
+    
+    const allRaw = [...tseData, ...otcData];
+    const results = allRaw.map(s => analyze(s)).filter(s => s !== null);
+    stockData = results;
+    
+    const now = new Date();
+    document.getElementById('updateTime').textContent = '✓ ' + now.toLocaleString('zh-TW', { hour12: false });
+    
+    try {
+      localStorage.setItem('stockData_v4', JSON.stringify(stockData));
+      localStorage.setItem('lastUpdate_v4', now.toISOString());
+    } catch (e) {}
+    
+    banner.className = 'banner success';
+    banner.innerHTML = '✓ 抓取完成！共 ' + stockData.length + ' 檔股票';
+    setTimeout(() => { banner.style.display = 'none'; }, 4000);
+    
+    render();
+    toast('已更新 ' + stockData.length + ' 檔', 'success');
+  } catch (e) {
+    banner.className = 'banner error';
+    banner.innerHTML = '❌ 抓取失敗：' + e.message;
+    toast('抓取失敗', 'error');
+  }
+  
+  btn.classList.remove('loading');
+  btn.disabled = false;
+}
+
+function render() { renderTopRecs(); renderStats(); renderTable(); }
+
+function renderTopRecs() {
+  const strong = stockData.filter(s => s.conclusion === '優先候選').sort((a, b) => b.score - a.score || b.changePct - a.changePct).slice(0, 5);
+  const dt = stockData.filter(s => s.dt).sort((a, b) => b.score - a.score || b.changePct - a.changePct).slice(0, 5);
+  
+  document.getElementById('strongCount').textContent = stockData.filter(s => s.conclusion === '優先候選').length + ' 檔';
+  document.getElementById('dtCount').textContent = stockData.filter(s => s.dt).length + ' 檔';
+  
+  document.getElementById('strongList').innerHTML = strong.length === 0
+    ? '<div class="rec-empty">今日無符合強勢候選條件的標的</div>'
+    : strong.map((s, i) => '<div class="rec-item"><div class="rec-rank ' + (i===0?'r1':'') + '">' + (i+1) + '</div><div><div class="rec-name">' + s.name + '</div><div class="rec-meta">' + s.code + ' · 漲' + (s.changePct*100).toFixed(2) + '% · 離高 ' + (s.highGap*100).toFixed(2) + '%</div></div><div class="rec-score">' + s.score + '</div><div class="rec-action">目標 ' + s.targetPrice.toFixed(2) + '</div></div>').join('');
+  
+  document.getElementById('dtList').innerHTML = dt.length === 0
+    ? '<div class="rec-empty">今日無符合隔日沖條件的標的</div>'
+    : dt.map((s, i) => '<div class="rec-item"><div class="rec-rank ' + (i===0?'r1':'') + '">' + (i+1) + '</div><div><div class="rec-name">' + s.name + '</div><div class="rec-meta">' + s.code + ' · 漲' + (s.changePct*100).toFixed(2) + '% · 收高不收影</div></div><div class="rec-score">' + s.score + '</div><div class="rec-action">目標 ' + s.targetPrice.toFixed(2) + '</div></div>').join('');
+}
+
+function renderStats() {
+  document.getElementById('stTotal').textContent = stockData.length;
+  document.getElementById('stUp').textContent = stockData.filter(s => s.change > 0).length;
+  document.getElementById('stDown').textContent = stockData.filter(s => s.change < 0).length;
+  document.getElementById('stStrong').textContent = stockData.filter(s => s.score >= 8).length;
+  document.getElementById('stDT').textContent = stockData.filter(s => s.dt).length;
+}
+
+function getScoreClass(s) {
+  if (s >= 9) return 's-10';
+  if (s >= 7) return 's-8';
+  if (s >= 5) return 's-6';
+  return 's-low';
+}
+
+function getConTag(c) {
+  if (c === '優先候選') return 'tag-strong';
+  if (c === '可觀察') return 'tag-watch';
+  return 'tag-skip';
+}
+
+function getWarnHtml(warns) {
+  return warns.map(w => {
+    if (w === 'shadow') return '<span class="warn w-shadow">上影</span>';
+    if (w === 'limit') return '<span class="warn w-limit">近漲停</span>';
+    return '';
+  }).join(' ');
+}
+
+function fmtVolume(v) {
+  if (v >= 100000000) return (v/100000000).toFixed(1) + '億';
+  if (v >= 10000) return Math.round(v/10000) + '萬';
+  return v.toLocaleString();
+}
+
+function renderTable() {
+  let list = [...stockData];
+  const search = (document.getElementById('searchInput').value || '').trim().toLowerCase();
+  if (search) list = list.filter(s => s.name.toLowerCase().includes(search) || s.code.includes(search));
+  
+  if (currentFilter === 'strong') list = list.filter(s => s.conclusion === '優先候選');
+  else if (currentFilter === 'dt') list = list.filter(s => s.dt);
+  else if (currentFilter === 'rise') list = list.filter(s => s.changePct > 0);
+  else if (currentFilter === 'big') list = list.filter(s => s.changePct >= 0.05);
+  else if (currentFilter === 'limit') list = list.filter(s => s.changePct >= 0.09);
+  
+  const { key, dir } = currentSort;
+  list.sort((a, b) => ((a[key] || 0) - (b[key] || 0)) * (dir === 'desc' ? -1 : 1));
+  if (list.length > 500) list = list.slice(0, 500);
+  
+  const html = list.map(s => {
+    const chgClass = s.change > 0 ? 'pos' : s.change < 0 ? 'neg' : 'zero';
+    const chgText = (s.change >= 0 ? '+' : '') + (s.changePct*100).toFixed(2) + '%';
+    const gapClass = s.highGap <= 0.01 ? 'pos' : s.highGap <= 0.03 ? 'zero' : 'neg';
+    return '<tr class="' + (s.conclusion==='優先候選' ? 'priority' : '') + '"><td class="left"><div class="cell-name"><div class="name">' + s.name + '</div><div class="code">' + s.code + '</div></div></td><td><span class="num">' + s.closingPrice.toFixed(2) + '</span></td><td><span class="num ' + chgClass + '">' + chgText + '</span></td><td><span class="num ' + gapClass + '">' + (s.highGap*100).toFixed(2) + '%</span></td><td><span class="num">' + (s.amplitude*100).toFixed(2) + '%</span></td><td><span class="num">' + s.openingPrice.toFixed(2) + '</span></td><td><span class="num pos">' + s.highestPrice.toFixed(2) + '</span></td><td><span class="num neg">' + s.lowestPrice.toFixed(2) + '</span></td><td><span class="num">' + fmtVolume(s.tradeVolume) + '</span></td><td><span class="score-badge ' + getScoreClass(s.score) + '">' + s.score + '</span></td><td><span class="tag ' + getConTag(s.conclusion) + '">' + s.conclusion + '</span></td><td>' + (s.dt ? '<span class="tag tag-dt">🔥</span>' : '<span class="zero">—</span>') + '</td><td><span class="num neg">' + s.stopPrice.toFixed(2) + '</span></td><td><span class="num pos">' + s.targetPrice.toFixed(2) + '</span></td><td>' + getWarnHtml(s.warns) + '</td></tr>';
+  }).join('');
+  
+  document.getElementById('tableBody').innerHTML = html || '<tr><td colspan="15" style="text-align:center;padding:40px;color:var(--muted)">無資料，請點重新抓取</td></tr>';
+}
+
+function setFilter(btn) {
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  btn.classList.add('active');
+  currentFilter = btn.dataset.f;
+  renderTable();
+}
+
+document.querySelectorAll('th.sortable').forEach(th => {
+  th.addEventListener('click', () => {
+    const key = th.dataset.sort;
+    if (currentSort.key === key) currentSort.dir = currentSort.dir === 'desc' ? 'asc' : 'desc';
+    else { currentSort.key = key; currentSort.dir = 'desc'; }
+    document.querySelectorAll('th.sortable').forEach(t => { const a = t.querySelector('.sort-arrow'); if (a) a.remove(); });
+    const arrow = document.createElement('span');
+    arrow.className = 'sort-arr​​​​​​​​​​​​​​​​
