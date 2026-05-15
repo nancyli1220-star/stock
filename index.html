@@ -80,7 +80,7 @@ tbody td.left{text-align:left;}
 <div class="topbar">
   <div>
     <div class="logo-text">📊 每日選股指南</div>
-    <div class="logo-sub">證交所官方 API · 全市場掃描</div>
+    <div class="logo-sub">證交所盤後資料 · 走代理</div>
   </div>
   <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
     <div class="update-time" id="updateTime">未更新</div>
@@ -106,7 +106,7 @@ tbody td.left{text-align:left;}
 
 <div class="main">
   <div class="info">
-    💡 <b>資料：證交所官方 OpenAPI</b>，盤後 18:00 後當日資料。<b>離高%</b> = (高-收)/高，越小越強。
+    💡 <b>資料：證交所 MI_INDEX（13:35 後即有）</b>。透過 CORS 代理抓取。<b>離高%</b> = (高-收)/高，越小越強。
   </div>
 
   <div class="stats">
@@ -144,37 +144,38 @@ tbody td.left{text-align:left;}
 var stockData = [];
 var currentFilter = 'all';
 
+var PROXIES = [
+  function(url) { return 'https://corsproxy.io/?url=' + encodeURIComponent(url); },
+  function(url) { return 'https://api.codetabs.com/v1/proxy?quest=' + encodeURIComponent(url); },
+  function(url) { return 'https://api.allorigins.win/raw?url=' + encodeURIComponent(url); },
+  function(url) { return 'https://api.cors.lol/?url=' + encodeURIComponent(url); }
+];
+
 function showBanner(type, msg) {
   var b = document.getElementById('banner');
   b.className = 'banner show ' + type;
-  b.textContent = msg;
+  b.innerHTML = msg;
 }
 
 function hideBanner() {
   document.getElementById('banner').classList.remove('show');
 }
 
-async function fetchTSE() {
-  try {
-    var r = await fetch('https://openapi.twse.com.tw/v1/exchangeReport/STOCK_DAY_ALL');
-    if (!r.ok) return [];
-    var d = await r.json();
-    return Array.isArray(d) ? d : [];
-  } catch(e) {
-    console.error('TSE error', e);
-    return [];
+async function fetchViaProxy(url) {
+  for (var i = 0; i < PROXIES.length; i++) {
+    try {
+      var ctrl = new AbortController();
+      var tid = setTimeout(function(){ctrl.abort();}, 15000);
+      var r = await fetch(PROXIES[i](url), { signal: ctrl.signal });
+      clearTimeout(tid);
+      if (!r.ok) continue;
+      var txt = await r.text();
+      try { return JSON.parse(txt); } catch(e) { continue; }
+    } catch(e) {
+      console.error('proxy ' + i + ' err', e);
+    }
   }
-}
-
-async function fetchOTC() {
-  try {
-    var r = await fetch('https://www.tpex.org.tw/openapi/v1/tpex_mainboard_daily_close_quotes');
-    if (!r.ok) return [];
-    var d = await r.json();
-    return Array.isArray(d) ? d : [];
-  } catch(e) {
-    return [];
-  }
+  return null;
 }
 
 function num(v) {
@@ -183,19 +184,87 @@ function num(v) {
   return isNaN(n) ? 0 : n;
 }
 
+async function fetchAll() {
+  showBanner('loading', '📡 嘗試 MI_INDEX（13:35 後資料）...');
+  var d1 = await fetchViaProxy('https://www.twse.com.tw/rwd/zh/afterTrading/MI_INDEX?type=ALLBUT0999&response=json');
+  if (d1 && d1.tables) {
+    for (var j = 0; j < d1.tables.length; j++) {
+      var t = d1.tables[j];
+      if (t.fields && t.data && t.data.length > 50) {
+        var hasCode = false;
+        for (var k = 0; k < t.fields.length; k++) {
+          if (String(t.fields[k]).indexOf('證券代號') >= 0) { hasCode = true; break; }
+        }
+        if (hasCode) {
+          var rows = parseMI(t);
+          if (rows.length > 0) {
+            return { data: rows, source: 'MI_INDEX' };
+          }
+        }
+      }
+    }
+  }
+  
+  showBanner('loading', '📡 試 STOCK_DAY_ALL（21:00 後資料）...');
+  var d2 = await fetchViaProxy('https://openapi.twse.com.tw/v1/exchangeReport/STOCK_DAY_ALL');
+  if (Array.isArray(d2) && d2.length > 0) {
+    return { data: d2, source: 'STOCK_DAY_ALL' };
+  }
+  
+  return { data: [], source: null };
+}
+
+function parseMI(table) {
+  var idx = { code:-1, name:-1, open:-1, high:-1, low:-1, close:-1, volume:-1, change:-1, sign:-1 };
+  for (var i = 0; i < table.fields.length; i++) {
+    var f = String(table.fields[i]);
+    if (f.indexOf('證券代號') >= 0) idx.code = i;
+    else if (f.indexOf('證券名稱') >= 0) idx.name = i;
+    else if (f.indexOf('開盤價') >= 0) idx.open = i;
+    else if (f.indexOf('最高價') >= 0) idx.high = i;
+    else if (f.indexOf('最低價') >= 0) idx.low = i;
+    else if (f.indexOf('收盤價') >= 0) idx.close = i;
+    else if (f.indexOf('成交股數') >= 0) idx.volume = i;
+    else if (f.indexOf('漲跌價差') >= 0) idx.change = i;
+    else if (f === '漲跌(+/-)') idx.sign = i;
+  }
+  if (idx.code < 0 || idx.close < 0) return [];
+  
+  var result = [];
+  for (var i = 0; i < table.data.length; i++) {
+    var row = table.data[i];
+    if (!row || !row[idx.code]) continue;
+    var changeStr = String(row[idx.change] || '0');
+    var changeVal = num(changeStr.replace(/[^0-9.]/g, ''));
+    var signStr = String(row[idx.sign] || '');
+    if (signStr.indexOf('green') >= 0 || signStr.indexOf('-') >= 0) changeVal = -changeVal;
+    
+    result.push({
+      Code: String(row[idx.code]).trim(),
+      Name: String(row[idx.name] || '').trim(),
+      OpeningPrice: row[idx.open],
+      HighestPrice: row[idx.high],
+      LowestPrice: row[idx.low],
+      ClosingPrice: row[idx.close],
+      TradeVolume: row[idx.volume],
+      Change: changeVal
+    });
+  }
+  return result;
+}
+
 function analyze(s) {
   try {
-    var code = String(s.Code || s.SecuritiesCompanyCode || '').trim();
-    var name = String(s.Name || s.CompanyName || '').trim();
+    var code = String(s.Code || '').trim();
+    var name = String(s.Name || '').trim();
     var open = num(s.OpeningPrice);
     var high = num(s.HighestPrice);
     var low = num(s.LowestPrice);
-    var close = num(s.ClosingPrice || s.Close);
-    var change = num(s.Change);
+    var close = num(s.ClosingPrice);
+    var change = typeof s.Change === 'number' ? s.Change : num(s.Change);
     var volume = num(s.TradeVolume);
     
-    if (!code || !name) return null;
-    if (close <= 0) return null;
+    if (!code || !name || close <= 0) return null;
     if (!/^\d{4,6}$/.test(code)) return null;
     if (code.startsWith('00') && code.length === 4) return null;
     
@@ -246,7 +315,6 @@ function analyze(s) {
       stopPrice: close * 0.98, targetPrice: close * 1.03
     };
   } catch(e) {
-    console.error('analyze err', e, s);
     return null;
   }
 }
@@ -255,23 +323,20 @@ async function refresh() {
   var btn = document.getElementById('refreshBtn');
   btn.disabled = true;
   btn.textContent = '⏳ 抓取中...';
-  showBanner('loading', '📡 抓取證交所資料中...');
   
   try {
-    var tse = await fetchTSE();
-    var otc = await fetchOTC();
+    var result = await fetchAll();
     
-    if (tse.length === 0 && otc.length === 0) {
-      showBanner('error', '❌ 證交所沒有回傳資料（可能是假日、盤前、或伺服器暫時不通）');
+    if (!result.data || result.data.length === 0) {
+      showBanner('error', '❌ 所有代理都連不上證交所。請等 1 分鐘後再試。');
       btn.disabled = false;
       btn.textContent = '🔄 重新抓取';
       return;
     }
     
-    var all = tse.concat(otc);
     var results = [];
-    for (var i = 0; i < all.length; i++) {
-      var r = analyze(all[i]);
+    for (var i = 0; i < result.data.length; i++) {
+      var r = analyze(result.data[i]);
       if (r) results.push(r);
     }
     
@@ -285,24 +350,19 @@ async function refresh() {
       localStorage.setItem('lu', now.toISOString());
     } catch(e) {}
     
-    showBanner('success', '✓ 完成！上市 ' + tse.length + ' 檔 + 上櫃 ' + otc.length + ' 檔，分析後共 ' + stockData.length + ' 檔');
+    showBanner('success', '✓ 完成！來源：' + result.source + '，共 ' + stockData.length + ' 檔');
     setTimeout(hideBanner, 5000);
     
     render();
   } catch(e) {
     showBanner('error', '❌ 錯誤：' + e.message);
-    console.error(e);
   }
   
   btn.disabled = false;
   btn.textContent = '🔄 重新抓取';
 }
 
-function render() {
-  renderRecs();
-  renderStats();
-  renderTable();
-}
+function render() { renderRecs(); renderStats(); renderTable(); }
 
 function renderRecs() {
   var strong = stockData.filter(function(s){return s.conclusion === '優先候選';}).sort(function(a,b){return b.score - a.score;}).slice(0,5);
