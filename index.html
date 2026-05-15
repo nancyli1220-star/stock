@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>每日選股指南</title>
 <style>
-:root { --bg:#0a0c10; --bg2:#0f1318; --bg3:#141920; --bg4:#1a2030; --border:rgba(255,255,255,0.07); --border2:rgba(255,255,255,0.12); --accent:#f0b429; --green:#30c97e; --red:#f05252; --blue:#4fa3f7; --orange:#f0824e; --muted:#5a6478; --text:#e8ecf4; --text2:#8a95a8; }
+:root { --bg:#0a0c10; --bg2:#0f1318; --bg3:#141920; --bg4:#1a2030; --border:rgba(255,255,255,0.07); --border2:rgba(255,255,255,0.12); --accent:#f0b429; --green:#30c97e; --red:#f05252; --blue:#4fa3f7; --orange:#f0824e; --purple:#b568f5; --muted:#5a6478; --text:#e8ecf4; --text2:#8a95a8; }
 *{margin:0;padding:0;box-sizing:border-box;}
 body{background:var(--bg);color:var(--text);font-family:-apple-system,"PingFang TC",sans-serif;font-size:13px;}
 .topbar{background:var(--bg2);border-bottom:1px solid var(--border);padding:14px 16px;display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;position:sticky;top:0;z-index:10;}
@@ -21,27 +21,35 @@ body{background:var(--bg);color:var(--text);font-family:-apple-system,"PingFang 
 .banner.error{background:rgba(240,82,82,0.1);color:var(--red);}
 .hero{padding:18px 16px;background:#0f1820;border-bottom:1px solid var(--border);}
 .hero-title{font-size:11px;font-weight:700;letter-spacing:0.15em;color:var(--accent);margin-bottom:14px;}
-.top-recs{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
-@media(max-width:900px){.top-recs{grid-template-columns:1fr;}}
+.top-recs{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;}
+@media(max-width:1100px){.top-recs{grid-template-columns:1fr 1fr;}}
+@media(max-width:700px){.top-recs{grid-template-columns:1fr;}}
 .rec-panel{background:var(--bg3);border:1px solid var(--border);border-radius:12px;padding:14px;}
 .rec-panel.strong{border-color:rgba(240,82,82,0.3);}
 .rec-panel.dt{border-color:rgba(240,130,78,0.3);}
+.rec-panel.warn{border-color:rgba(181,104,245,0.3);}
 .rec-header{display:flex;justify-content:space-between;margin-bottom:10px;padding-bottom:8px;border-bottom:1px solid var(--border);}
 .rec-type{font-size:13px;font-weight:700;}
 .rec-type.s{color:var(--red);}
 .rec-type.d{color:var(--orange);}
+.rec-type.w{color:var(--purple);}
 .rec-count{font-size:10px;color:var(--muted);}
 .rec-list{display:flex;flex-direction:column;gap:6px;}
 .rec-item{display:grid;grid-template-columns:24px 1fr auto;gap:10px;align-items:center;padding:9px 12px;background:rgba(255,255,255,0.02);border-radius:6px;}
 .rec-rank{width:22px;height:22px;background:var(--bg4);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;}
 .rec-rank.r1{background:var(--accent);color:#000;}
+.rec-rank.w1{background:var(--purple);color:#fff;}
 .rec-name{font-size:14px;font-weight:700;}
 .rec-meta{font-size:10px;color:var(--muted);}
-.rec-score{font-size:14px;font-weight:700;padding:3px 9px;background:rgba(240,180,41,0.15);color:var(--accent);border-radius:4px;}
+.rec-score{font-size:14px;font-weight:700;padding:3px 9px;border-radius:4px;}
+.rec-score.s{background:rgba(240,180,41,0.15);color:var(--accent);}
+.rec-score.w{background:rgba(181,104,245,0.15);color:var(--purple);}
 .rec-empty{padding:20px;text-align:center;color:var(--muted);font-size:12px;border:1px dashed var(--border2);border-radius:6px;}
+.warn-tip{font-size:10px;color:var(--purple);padding:4px 8px;background:rgba(181,104,245,0.08);border-radius:4px;margin-bottom:8px;}
 .main{padding:18px 16px;}
-.stats{display:grid;grid-template-columns:repeat(5,1fr);gap:10px;margin-bottom:16px;}
-@media(max-width:700px){.stats{grid-template-columns:repeat(3,1fr);}}
+.stats{display:grid;grid-template-columns:repeat(6,1fr);gap:10px;margin-bottom:16px;}
+@media(max-width:900px){.stats{grid-template-columns:repeat(3,1fr);}}
+@media(max-width:480px){.stats{grid-template-columns:repeat(2,1fr);}}
 .stat{background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:10px;}
 .stat-v{font-size:22px;font-weight:700;}
 .stat-l{font-size:10px;color:var(--muted);margin-top:4px;}
@@ -49,12 +57,14 @@ body{background:var(--bg);color:var(--text);font-family:-apple-system,"PingFang 
 .tabs{display:flex;gap:3px;background:var(--bg3);border-radius:8px;padding:3px;flex-wrap:wrap;}
 .tab{padding:5px 11px;border-radius:6px;font-size:11px;font-weight:600;color:var(--muted);border:none;background:none;}
 .tab.active{background:var(--accent);color:#000;}
+.tab.active.warn{background:var(--purple);color:#fff;}
 .tw{background:var(--bg2);border:1px solid var(--border);border-radius:10px;overflow:auto;max-height:60vh;}
 table{width:100%;border-collapse:separate;border-spacing:0;min-width:900px;}
 thead th{font-size:10px;font-weight:700;color:var(--muted);padding:10px;text-align:right;white-space:nowrap;border-bottom:1px solid var(--border2);background:var(--bg2);position:sticky;top:0;}
 thead th.left{text-align:left;}
 tbody tr{border-bottom:1px solid var(--border);}
 tbody tr.pri{background:rgba(240,180,41,0.04);}
+tbody tr.warning{background:rgba(181,104,245,0.04);}
 tbody td{padding:10px;font-size:12px;text-align:right;white-space:nowrap;}
 tbody td.left{text-align:left;}
 .name{font-size:13px;font-weight:700;}
@@ -68,19 +78,20 @@ tbody td.left{text-align:left;}
 .s-5{background:rgba(48,201,126,0.12);color:var(--green);}
 .s-l{background:rgba(90,100,120,0.12);color:var(--muted);}
 .tag{display:inline-block;padding:2px 7px;font-size:10px;font-weight:600;border-radius:4px;}
-.t-buy{background:rgba(240,82,82,0.15);color:var(--red);}
+.t-buy{background:rgba(240,180,41,0.15);color:var(--accent);}
 .t-watch{background:rgba(79,163,247,0.1);color:var(--blue);}
 .t-skip{color:var(--muted);}
+.t-warn{background:rgba(181,104,245,0.15);color:var(--purple);}
+.warn-lbl{display:inline-block;font-size:9px;padding:2px 5px;border-radius:3px;font-weight:600;background:rgba(181,104,245,0.15);color:var(--purple);margin-left:4px;}
 .info{background:var(--bg2);border-radius:8px;padding:12px;margin-bottom:14px;font-size:11px;color:var(--text2);line-height:1.6;}
 .info b{color:var(--accent);}
 </style>
 </head>
 <body>
-
 <div class="topbar">
   <div>
     <div class="logo-text">📊 每日選股指南</div>
-    <div class="logo-sub">證交所盤後資料 · 走代理</div>
+    <div class="logo-sub">v7 · 強勢過濾 + 警示分頁</div>
   </div>
   <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
     <div class="update-time" id="updateTime">未更新</div>
@@ -95,34 +106,43 @@ tbody td.left{text-align:left;}
   <div class="top-recs">
     <div class="rec-panel strong">
       <div class="rec-header"><div class="rec-type s">⭐ 強勢候選</div><div class="rec-count" id="sC">— 檔</div></div>
+      <div class="warn-tip">📌 漲 3-7% 未漲停，明天有空間</div>
       <div class="rec-list" id="sList"></div>
     </div>
     <div class="rec-panel dt">
       <div class="rec-header"><div class="rec-type d">🔥 隔日沖優選</div><div class="rec-count" id="dC">— 檔</div></div>
+      <div class="warn-tip">📌 強勢未漲停，隔天試開盤強度</div>
       <div class="rec-list" id="dList"></div>
+    </div>
+    <div class="rec-panel warn">
+      <div class="rec-header"><div class="rec-type w">⚠ 漲停／高位警示</div><div class="rec-count" id="wC">— 檔</div></div>
+      <div class="warn-tip">⚠ 已漲停或近漲停，不建議追</div>
+      <div class="rec-list" id="wList"></div>
     </div>
   </div>
 </div>
 
 <div class="main">
   <div class="info">
-    💡 <b>資料：證交所 MI_INDEX（13:35 後即有）</b>。透過 CORS 代理抓取。<b>離高%</b> = (高-收)/高，越小越強。
+    💡 <b>強勢候選</b>：漲幅 3-7%、未漲停、收高離高點近。<b>警示分頁</b>：漲幅 ≥7% 或上影線大，已經爆發，隔日勝率低。資料來源：證交所盤後（13:35 後）。
   </div>
 
   <div class="stats">
     <div class="stat"><div class="stat-v" id="stT">—</div><div class="stat-l">全市場</div></div>
     <div class="stat"><div class="stat-v" id="stU" style="color:var(--red)">—</div><div class="stat-l">上漲</div></div>
     <div class="stat"><div class="stat-v" id="stD" style="color:var(--green)">—</div><div class="stat-l">下跌</div></div>
-    <div class="stat"><div class="stat-v" id="stS" style="color:var(--red)">—</div><div class="stat-l">強勢</div></div>
+    <div class="stat"><div class="stat-v" id="stS" style="color:var(--accent)">—</div><div class="stat-l">優先候選</div></div>
     <div class="stat"><div class="stat-v" id="stDT" style="color:var(--orange)">—</div><div class="stat-l">隔日沖</div></div>
+    <div class="stat"><div class="stat-v" id="stW" style="color:var(--purple)">—</div><div class="stat-l">警示</div></div>
   </div>
 
   <div class="section-h">
     <div style="font-size:11px;font-weight:700;color:var(--muted)">📋 全市場清單</div>
     <div class="tabs">
       <button class="tab active" data-f="all" onclick="setF(this)">全部</button>
-      <button class="tab" data-f="strong" onclick="setF(this)">強勢</button>
+      <button class="tab" data-f="strong" onclick="setF(this)">優先候選</button>
       <button class="tab" data-f="dt" onclick="setF(this)">隔日沖</button>
+      <button class="tab" data-f="warn" onclick="setF(this)">⚠ 警示</button>
       <button class="tab" data-f="rise" onclick="setF(this)">上漲</button>
       <button class="tab" data-f="big" onclick="setF(this)">大漲≥5%</button>
     </div>
@@ -171,9 +191,7 @@ async function fetchViaProxy(url) {
       if (!r.ok) continue;
       var txt = await r.text();
       try { return JSON.parse(txt); } catch(e) { continue; }
-    } catch(e) {
-      console.error('proxy ' + i + ' err', e);
-    }
+    } catch(e) {}
   }
   return null;
 }
@@ -197,20 +215,17 @@ async function fetchAll() {
         }
         if (hasCode) {
           var rows = parseMI(t);
-          if (rows.length > 0) {
-            return { data: rows, source: 'MI_INDEX' };
-          }
+          if (rows.length > 0) return { data: rows, source: 'MI_INDEX' };
         }
       }
     }
   }
   
-  showBanner('loading', '📡 試 STOCK_DAY_ALL（21:00 後資料）...');
+  showBanner('loading', '📡 試 STOCK_DAY_ALL（21:00 後）...');
   var d2 = await fetchViaProxy('https://openapi.twse.com.tw/v1/exchangeReport/STOCK_DAY_ALL');
   if (Array.isArray(d2) && d2.length > 0) {
     return { data: d2, source: 'STOCK_DAY_ALL' };
   }
-  
   return { data: [], source: null };
 }
 
@@ -275,10 +290,10 @@ function analyze(s) {
     var upperShadow = high > close && close > 0 ? (high - close) / close : 0;
     
     var score = 0;
-    if (changePct >= 0.07) score += 3;
-    else if (changePct >= 0.05) score += 2;
-    else if (changePct >= 0.03) score += 1.5;
+    if (changePct >= 0.05 && changePct < 0.07) score += 3;
+    else if (changePct >= 0.03) score += 2;
     else if (changePct >= 0.01) score += 1;
+    else if (changePct >= 0.07) score += 1.5;
     
     if (highGap <= 0.005) score += 3;
     else if (highGap <= 0.01) score += 2.5;
@@ -296,27 +311,38 @@ function analyze(s) {
     else if (volume >= 1000000) score += 1.5;
     else if (volume >= 500000) score += 1;
     
+    var warns = [];
+    if (changePct >= 0.09) { warns.push('漲停'); score -= 2; }
+    else if (changePct >= 0.07) { warns.push('近漲停'); score -= 1; }
+    if (upperShadow >= 0.03) { warns.push('上影'); score -= 1; }
+    
     if (score > 10) score = 10;
+    if (score < 0) score = 0;
     score = Math.round(score * 10) / 10;
     
+    var isWarning = changePct >= 0.07 || upperShadow >= 0.03;
     var conclusion = '不買';
-    if (score >= 8 && changePct > 0 && highGap <= 0.02) conclusion = '優先候選';
-    else if (score >= 6 && changePct > 0) conclusion = '可觀察';
+    if (!isWarning && score >= 7.5 && changePct >= 0.02 && changePct < 0.07 && highGap <= 0.02) {
+      conclusion = '優先候選';
+    } else if (!isWarning && score >= 5.5 && changePct > 0) {
+      conclusion = '可觀察';
+    } else if (isWarning) {
+      conclusion = '警示';
+    }
     
-    var dt = changePct >= 0.03 && changePct < 0.095 && highGap <= 0.02 && close > open && upperShadow < 0.03 && score >= 7;
+    var dt = changePct >= 0.03 && changePct < 0.07 && highGap <= 0.02 && close > open && upperShadow < 0.02 && score >= 7;
     
     return {
       code: code, name: name,
       closingPrice: close, change: change, changePct: changePct,
-      highGap: highGap, amplitude: amplitude,
+      highGap: highGap, amplitude: amplitude, upperShadow: upperShadow,
       openingPrice: open, highestPrice: high, lowestPrice: low,
       tradeVolume: volume,
       score: score, conclusion: conclusion, dt: dt,
+      warns: warns, isWarning: isWarning,
       stopPrice: close * 0.98, targetPrice: close * 1.03
     };
-  } catch(e) {
-    return null;
-  }
+  } catch(e) { return null; }
 }
 
 async function refresh() {
@@ -326,7 +352,6 @@ async function refresh() {
   
   try {
     var result = await fetchAll();
-    
     if (!result.data || result.data.length === 0) {
       showBanner('error', '❌ 所有代理都連不上證交所。請等 1 分鐘後再試。');
       btn.disabled = false;
@@ -339,7 +364,6 @@ async function refresh() {
       var r = analyze(result.data[i]);
       if (r) results.push(r);
     }
-    
     stockData = results;
     
     var now = new Date();
@@ -352,7 +376,6 @@ async function refresh() {
     
     showBanner('success', '✓ 完成！來源：' + result.source + '，共 ' + stockData.length + ' 檔');
     setTimeout(hideBanner, 5000);
-    
     render();
   } catch(e) {
     showBanner('error', '❌ 錯誤：' + e.message);
@@ -367,36 +390,45 @@ function render() { renderRecs(); renderStats(); renderTable(); }
 function renderRecs() {
   var strong = stockData.filter(function(s){return s.conclusion === '優先候選';}).sort(function(a,b){return b.score - a.score;}).slice(0,5);
   var dt = stockData.filter(function(s){return s.dt;}).sort(function(a,b){return b.score - a.score;}).slice(0,5);
+  var warn = stockData.filter(function(s){return s.isWarning && s.changePct >= 0.05;}).sort(function(a,b){return b.changePct - a.changePct;}).slice(0,5);
   
   document.getElementById('sC').textContent = stockData.filter(function(s){return s.conclusion === '優先候選';}).length + ' 檔';
   document.getElementById('dC').textContent = stockData.filter(function(s){return s.dt;}).length + ' 檔';
+  document.getElementById('wC').textContent = stockData.filter(function(s){return s.isWarning && s.changePct >= 0.05;}).length + ' 檔';
   
-  function renderList(arr, id) {
+  function renderList(arr, id, type) {
     var html = '';
     if (arr.length === 0) {
       html = '<div class="rec-empty">今日無符合條件的標的</div>';
     } else {
       for (var i = 0; i < arr.length; i++) {
         var s = arr[i];
-        html += '<div class="rec-item"><div class="rec-rank' + (i===0?' r1':'') + '">' + (i+1) + '</div>';
+        var rankCls = i===0 ? (type==='warn' ? ' w1' : ' r1') : '';
+        var scoreCls = type === 'warn' ? 'w' : 's';
+        var meta = s.code + ' · 漲' + (s.changePct*100).toFixed(2) + '%';
+        if (type === 'warn') meta += ' · ' + s.warns.join('+');
+        else meta += ' · 離高 ' + (s.highGap*100).toFixed(2) + '%';
+        html += '<div class="rec-item"><div class="rec-rank' + rankCls + '">' + (i+1) + '</div>';
         html += '<div><div class="rec-name">' + s.name + '</div>';
-        html += '<div class="rec-meta">' + s.code + ' · 漲' + (s.changePct*100).toFixed(2) + '% · 離高 ' + (s.highGap*100).toFixed(2) + '%</div></div>';
-        html += '<div class="rec-score">' + s.score + '</div></div>';
+        html += '<div class="rec-meta">' + meta + '</div></div>';
+        html += '<div class="rec-score ' + scoreCls + '">' + (type === 'warn' ? '⚠' : s.score) + '</div></div>';
       }
     }
     document.getElementById(id).innerHTML = html;
   }
   
-  renderList(strong, 'sList');
-  renderList(dt, 'dList');
+  renderList(strong, 'sList', 'strong');
+  renderList(dt, 'dList', 'dt');
+  renderList(warn, 'wList', 'warn');
 }
 
 function renderStats() {
   document.getElementById('stT').textContent = stockData.length;
   document.getElementById('stU').textContent = stockData.filter(function(s){return s.change > 0;}).length;
   document.getElementById('stD').textContent = stockData.filter(function(s){return s.change < 0;}).length;
-  document.getElementById('stS').textContent = stockData.filter(function(s){return s.score >= 8;}).length;
+  document.getElementById('stS').textContent = stockData.filter(function(s){return s.conclusion === '優先候選';}).length;
   document.getElementById('stDT').textContent = stockData.filter(function(s){return s.dt;}).length;
+  document.getElementById('stW').textContent = stockData.filter(function(s){return s.isWarning && s.changePct >= 0.05;}).length;
 }
 
 function getScoreClass(s) {
@@ -416,10 +448,15 @@ function renderTable() {
   var list = stockData.slice();
   if (currentFilter === 'strong') list = list.filter(function(s){return s.conclusion === '優先候選';});
   else if (currentFilter === 'dt') list = list.filter(function(s){return s.dt;});
+  else if (currentFilter === 'warn') list = list.filter(function(s){return s.isWarning && s.changePct >= 0.05;});
   else if (currentFilter === 'rise') list = list.filter(function(s){return s.changePct > 0;});
   else if (currentFilter === 'big') list = list.filter(function(s){return s.changePct >= 0.05;});
   
-  list.sort(function(a,b){return b.score - a.score;});
+  if (currentFilter === 'warn') {
+    list.sort(function(a,b){return b.changePct - a.changePct;});
+  } else {
+    list.sort(function(a,b){return b.score - a.score;});
+  }
   if (list.length > 300) list = list.slice(0, 300);
   
   var html = '';
@@ -427,10 +464,22 @@ function renderTable() {
     var s = list[i];
     var cc = s.change > 0 ? 'pos' : (s.change < 0 ? 'neg' : 'zero');
     var ct = (s.change >= 0 ? '+' : '') + (s.changePct*100).toFixed(2) + '%';
-    var tag = s.conclusion === '優先候選' ? 't-buy' : (s.conclusion === '可觀察' ? 't-watch' : 't-skip');
+    var tag = 't-skip';
+    if (s.conclusion === '優先候選') tag = 't-buy';
+    else if (s.conclusion === '可觀察') tag = 't-watch';
+    else if (s.conclusion === '警示') tag = 't-warn';
     
-    html += '<tr' + (s.conclusion === '優先候選' ? ' class="pri"' : '') + '>';
-    html += '<td class="left"><div class="name">' + s.name + '</div><div class="code">' + s.code + '</div></td>';
+    var trCls = '';
+    if (s.conclusion === '優先候選') trCls = ' class="pri"';
+    else if (s.isWarning && s.changePct >= 0.05) trCls = ' class="warning"';
+    
+    var warnLbl = '';
+    if (s.warns.length > 0) {
+      warnLbl = '<span class="warn-lbl">' + s.warns.join('/') + '</span>';
+    }
+    
+    html += '<tr' + trCls + '>';
+    html += '<td class="left"><div class="name">' + s.name + warnLbl + '</div><div class="code">' + s.code + '</div></td>';
     html += '<td>' + s.closingPrice.toFixed(2) + '</td>';
     html += '<td class="' + cc + '">' + ct + '</td>';
     html += '<td>' + (s.highGap*100).toFixed(2) + '%</td>';
@@ -453,8 +502,9 @@ function renderTable() {
 
 function setF(btn) {
   var tabs = document.querySelectorAll('.tab');
-  for (var i = 0; i < tabs.length; i++) tabs[i].classList.remove('active');
+  for (var i = 0; i < tabs.length; i++) tabs[i].classList.remove('active', 'warn');
   btn.classList.add('active');
+  if (btn.getAttribute('data-f') === 'warn') btn.classList.add('warn');
   currentFilter = btn.getAttribute('data-f');
   renderTable();
 }
