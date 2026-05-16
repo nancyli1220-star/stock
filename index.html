@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>每日選股指南</title>
+<title>每日選股指南 v8</title>
 <style>
 :root { --bg:#0a0c10; --bg2:#0f1318; --bg3:#141920; --bg4:#1a2030; --border:rgba(255,255,255,0.07); --border2:rgba(255,255,255,0.12); --accent:#f0b429; --green:#30c97e; --red:#f05252; --blue:#4fa3f7; --orange:#f0824e; --purple:#b568f5; --muted:#5a6478; --text:#e8ecf4; --text2:#8a95a8; }
 *{margin:0;padding:0;box-sizing:border-box;}
@@ -59,7 +59,7 @@ body{background:var(--bg);color:var(--text);font-family:-apple-system,"PingFang 
 .tab.active{background:var(--accent);color:#000;}
 .tab.active.warn{background:var(--purple);color:#fff;}
 .tw{background:var(--bg2);border:1px solid var(--border);border-radius:10px;overflow:auto;max-height:60vh;}
-table{width:100%;border-collapse:separate;border-spacing:0;min-width:900px;}
+table{width:100%;border-collapse:separate;border-spacing:0;min-width:950px;}
 thead th{font-size:10px;font-weight:700;color:var(--muted);padding:10px;text-align:right;white-space:nowrap;border-bottom:1px solid var(--border2);background:var(--bg2);position:sticky;top:0;}
 thead th.left{text-align:left;}
 tbody tr{border-bottom:1px solid var(--border);}
@@ -83,6 +83,12 @@ tbody td.left{text-align:left;}
 .t-skip{color:var(--muted);}
 .t-warn{background:rgba(181,104,245,0.15);color:var(--purple);}
 .warn-lbl{display:inline-block;font-size:9px;padding:2px 5px;border-radius:3px;font-weight:600;background:rgba(181,104,245,0.15);color:var(--purple);margin-left:4px;}
+.vol-lbl{display:inline-block;font-size:10px;padding:1px 5px;border-radius:3px;font-weight:600;}
+.vol-extreme{background:rgba(240,82,82,0.2);color:var(--red);}
+.vol-hot{background:rgba(240,130,78,0.18);color:var(--orange);}
+.vol-warm{background:rgba(240,180,41,0.15);color:var(--accent);}
+.vol-normal{background:rgba(90,100,120,0.15);color:var(--text2);}
+.vol-low{background:rgba(79,163,247,0.1);color:var(--blue);}
 .info{background:var(--bg2);border-radius:8px;padding:12px;margin-bottom:14px;font-size:11px;color:var(--text2);line-height:1.6;}
 .info b{color:var(--accent);}
 </style>
@@ -91,7 +97,7 @@ tbody td.left{text-align:left;}
 <div class="topbar">
   <div>
     <div class="logo-text">📊 每日選股指南</div>
-    <div class="logo-sub">v7 · 強勢過濾 + 警示分頁</div>
+    <div class="logo-sub">v8 · 強勢過濾 + 警示 + 量級</div>
   </div>
   <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
     <div class="update-time" id="updateTime">未更新</div>
@@ -106,12 +112,12 @@ tbody td.left{text-align:left;}
   <div class="top-recs">
     <div class="rec-panel strong">
       <div class="rec-header"><div class="rec-type s">⭐ 強勢候選</div><div class="rec-count" id="sC">— 檔</div></div>
-      <div class="warn-tip">📌 漲 3-7% 未漲停，明天有空間</div>
+      <div class="warn-tip">📌 漲 3-7% 未漲停，有量有人氣</div>
       <div class="rec-list" id="sList"></div>
     </div>
     <div class="rec-panel dt">
       <div class="rec-header"><div class="rec-type d">🔥 隔日沖優選</div><div class="rec-count" id="dC">— 檔</div></div>
-      <div class="warn-tip">📌 強勢未漲停，隔天試開盤強度</div>
+      <div class="warn-tip">📌 強勢未漲停 + 量級熱絡</div>
       <div class="rec-list" id="dList"></div>
     </div>
     <div class="rec-panel warn">
@@ -124,7 +130,7 @@ tbody td.left{text-align:left;}
 
 <div class="main">
   <div class="info">
-    💡 <b>強勢候選</b>：漲幅 3-7%、未漲停、收高離高點近。<b>警示分頁</b>：漲幅 ≥7% 或上影線大，已經爆發，隔日勝率低。資料來源：證交所盤後（13:35 後）。
+    💡 <b>量級分類</b>：依當日成交額排名，🔥極熱(前1%)、熱(前5%)、溫(前20%)、一般、💤量縮。<b>強勢候選</b>必須達「溫」以上 — 沒人氣的漲不算強勢。
   </div>
 
   <div class="stats">
@@ -144,7 +150,7 @@ tbody td.left{text-align:left;}
       <button class="tab" data-f="dt" onclick="setF(this)">隔日沖</button>
       <button class="tab" data-f="warn" onclick="setF(this)">⚠ 警示</button>
       <button class="tab" data-f="rise" onclick="setF(this)">上漲</button>
-      <button class="tab" data-f="big" onclick="setF(this)">大漲≥5%</button>
+      <button class="tab" data-f="hot" onclick="setF(this)">🔥 熱門</button>
     </div>
   </div>
 
@@ -153,7 +159,7 @@ tbody td.left{text-align:left;}
       <thead><tr>
         <th class="left">股票</th>
         <th>收盤</th><th>漲幅%</th><th>離高%</th><th>振幅%</th>
-        <th>開盤</th><th>最高</th><th>最低</th><th>成交量</th>
+        <th>開盤</th><th>最高</th><th>最低</th><th>量</th><th>量級</th>
         <th>評分</th><th>結論</th><th>隔日沖</th><th>停損</th><th>目標</th>
       </tr></thead>
       <tbody id="tb"></tbody>
@@ -176,10 +182,7 @@ function showBanner(type, msg) {
   b.className = 'banner show ' + type;
   b.innerHTML = msg;
 }
-
-function hideBanner() {
-  document.getElementById('banner').classList.remove('show');
-}
+function hideBanner() { document.getElementById('banner').classList.remove('show'); }
 
 async function fetchViaProxy(url) {
   for (var i = 0; i < PROXIES.length; i++) {
@@ -220,17 +223,14 @@ async function fetchAll() {
       }
     }
   }
-  
   showBanner('loading', '📡 試 STOCK_DAY_ALL（21:00 後）...');
   var d2 = await fetchViaProxy('https://openapi.twse.com.tw/v1/exchangeReport/STOCK_DAY_ALL');
-  if (Array.isArray(d2) && d2.length > 0) {
-    return { data: d2, source: 'STOCK_DAY_ALL' };
-  }
+  if (Array.isArray(d2) && d2.length > 0) return { data: d2, source: 'STOCK_DAY_ALL' };
   return { data: [], source: null };
 }
 
 function parseMI(table) {
-  var idx = { code:-1, name:-1, open:-1, high:-1, low:-1, close:-1, volume:-1, change:-1, sign:-1 };
+  var idx = { code:-1, name:-1, open:-1, high:-1, low:-1, close:-1, volume:-1, value:-1, change:-1, sign:-1 };
   for (var i = 0; i < table.fields.length; i++) {
     var f = String(table.fields[i]);
     if (f.indexOf('證券代號') >= 0) idx.code = i;
@@ -240,11 +240,11 @@ function parseMI(table) {
     else if (f.indexOf('最低價') >= 0) idx.low = i;
     else if (f.indexOf('收盤價') >= 0) idx.close = i;
     else if (f.indexOf('成交股數') >= 0) idx.volume = i;
+    else if (f.indexOf('成交金額') >= 0) idx.value = i;
     else if (f.indexOf('漲跌價差') >= 0) idx.change = i;
     else if (f === '漲跌(+/-)') idx.sign = i;
   }
   if (idx.code < 0 || idx.close < 0) return [];
-  
   var result = [];
   for (var i = 0; i < table.data.length; i++) {
     var row = table.data[i];
@@ -253,7 +253,6 @@ function parseMI(table) {
     var changeVal = num(changeStr.replace(/[^0-9.]/g, ''));
     var signStr = String(row[idx.sign] || '');
     if (signStr.indexOf('green') >= 0 || signStr.indexOf('-') >= 0) changeVal = -changeVal;
-    
     result.push({
       Code: String(row[idx.code]).trim(),
       Name: String(row[idx.name] || '').trim(),
@@ -262,13 +261,39 @@ function parseMI(table) {
       LowestPrice: row[idx.low],
       ClosingPrice: row[idx.close],
       TradeVolume: row[idx.volume],
+      TradeValue: idx.value >= 0 ? row[idx.value] : 0,
       Change: changeVal
     });
   }
   return result;
 }
 
-function analyze(s) {
+function assignVolumeLevel(stocks) {
+  var withValue = stocks.map(function(s) {
+    var v = num(s.TradeValue);
+    if (v === 0) v = num(s.TradeVolume) * num(s.ClosingPrice);
+    return { s: s, value: v };
+  }).filter(function(x){return x.value > 0;});
+  withValue.sort(function(a, b){ return b.value - a.value; });
+  var n = withValue.length;
+  var top1pct = Math.floor(n * 0.01);
+  var top5pct = Math.floor(n * 0.05);
+  var top20pct = Math.floor(n * 0.20);
+  var bottom20pct = Math.floor(n * 0.80);
+  var levelMap = {};
+  for (var i = 0; i < withValue.length; i++) {
+    var lvl;
+    if (i < top1pct) lvl = 'extreme';
+    else if (i < top5pct) lvl = 'hot';
+    else if (i < top20pct) lvl = 'warm';
+    else if (i < bottom20pct) lvl = 'normal';
+    else lvl = 'low';
+    levelMap[withValue[i].s.Code] = lvl;
+  }
+  return levelMap;
+}
+
+function analyze(s, volLevel) {
   try {
     var code = String(s.Code || '').trim();
     var name = String(s.Name || '').trim();
@@ -278,66 +303,56 @@ function analyze(s) {
     var close = num(s.ClosingPrice);
     var change = typeof s.Change === 'number' ? s.Change : num(s.Change);
     var volume = num(s.TradeVolume);
-    
+    var value = num(s.TradeValue);
     if (!code || !name || close <= 0) return null;
     if (!/^\d{4,6}$/.test(code)) return null;
     if (code.startsWith('00') && code.length === 4) return null;
-    
     var yest = close - change;
     var changePct = yest > 0 ? change / yest : 0;
     var highGap = high > 0 ? (high - close) / high : 0;
     var amplitude = yest > 0 ? (high - low) / yest : 0;
     var upperShadow = high > close && close > 0 ? (high - close) / close : 0;
-    
     var score = 0;
     if (changePct >= 0.05 && changePct < 0.07) score += 3;
     else if (changePct >= 0.03) score += 2;
     else if (changePct >= 0.01) score += 1;
     else if (changePct >= 0.07) score += 1.5;
-    
     if (highGap <= 0.005) score += 3;
     else if (highGap <= 0.01) score += 2.5;
     else if (highGap <= 0.02) score += 2;
     else if (highGap <= 0.03) score += 1;
-    
     if (close > open && open > 0) {
       var body = (close - open) / open;
       if (body >= 0.03) score += 2;
       else if (body >= 0.01) score += 1.5;
       else score += 1;
     }
-    
-    if (volume >= 5000000) score += 2;
-    else if (volume >= 1000000) score += 1.5;
-    else if (volume >= 500000) score += 1;
-    
+    if (volLevel === 'extreme') score += 2.5;
+    else if (volLevel === 'hot') score += 2;
+    else if (volLevel === 'warm') score += 1.5;
+    else if (volLevel === 'normal') score += 0.5;
     var warns = [];
     if (changePct >= 0.09) { warns.push('漲停'); score -= 2; }
     else if (changePct >= 0.07) { warns.push('近漲停'); score -= 1; }
     if (upperShadow >= 0.03) { warns.push('上影'); score -= 1; }
-    
+    if (volLevel === 'low' && changePct >= 0.03) { warns.push('量縮'); score -= 1.5; }
     if (score > 10) score = 10;
     if (score < 0) score = 0;
     score = Math.round(score * 10) / 10;
-    
-    var isWarning = changePct >= 0.07 || upperShadow >= 0.03;
+    var isWarning = changePct >= 0.07 || upperShadow >= 0.03 || (volLevel === 'low' && changePct >= 0.03);
+    var hasGoodVolume = volLevel === 'extreme' || volLevel === 'hot' || volLevel === 'warm';
     var conclusion = '不買';
-    if (!isWarning && score >= 7.5 && changePct >= 0.02 && changePct < 0.07 && highGap <= 0.02) {
-      conclusion = '優先候選';
-    } else if (!isWarning && score >= 5.5 && changePct > 0) {
-      conclusion = '可觀察';
-    } else if (isWarning) {
-      conclusion = '警示';
-    }
-    
-    var dt = changePct >= 0.03 && changePct < 0.07 && highGap <= 0.02 && close > open && upperShadow < 0.02 && score >= 7;
-    
+    if (!isWarning && hasGoodVolume && score >= 7.5 && changePct >= 0.02 && changePct < 0.07 && highGap <= 0.02) conclusion = '優先候選';
+    else if (!isWarning && score >= 5.5 && changePct > 0) conclusion = '可觀察';
+    else if (isWarning) conclusion = '警示';
+    var dt = changePct >= 0.03 && changePct < 0.07 && highGap <= 0.02 && close > open && upperShadow < 0.02 && score >= 7 && hasGoodVolume;
     return {
       code: code, name: name,
       closingPrice: close, change: change, changePct: changePct,
       highGap: highGap, amplitude: amplitude, upperShadow: upperShadow,
       openingPrice: open, highestPrice: high, lowestPrice: low,
-      tradeVolume: volume,
+      tradeVolume: volume, tradeValue: value,
+      volLevel: volLevel || 'normal',
       score: score, conclusion: conclusion, dt: dt,
       warns: warns, isWarning: isWarning,
       stopPrice: close * 0.98, targetPrice: close * 1.03
@@ -349,7 +364,6 @@ async function refresh() {
   var btn = document.getElementById('refreshBtn');
   btn.disabled = true;
   btn.textContent = '⏳ 抓取中...';
-  
   try {
     var result = await fetchAll();
     if (!result.data || result.data.length === 0) {
@@ -358,56 +372,63 @@ async function refresh() {
       btn.textContent = '🔄 重新抓取';
       return;
     }
-    
+    var volMap = assignVolumeLevel(result.data);
     var results = [];
     for (var i = 0; i < result.data.length; i++) {
-      var r = analyze(result.data[i]);
+      var raw = result.data[i];
+      var code = String(raw.Code || '').trim();
+      var r = analyze(raw, volMap[code]);
       if (r) results.push(r);
     }
     stockData = results;
-    
     var now = new Date();
     document.getElementById('updateTime').textContent = '✓ ' + now.toLocaleTimeString('zh-TW');
-    
     try {
       localStorage.setItem('sd', JSON.stringify(stockData));
       localStorage.setItem('lu', now.toISOString());
     } catch(e) {}
-    
     showBanner('success', '✓ 完成！來源：' + result.source + '，共 ' + stockData.length + ' 檔');
     setTimeout(hideBanner, 5000);
     render();
   } catch(e) {
     showBanner('error', '❌ 錯誤：' + e.message);
   }
-  
   btn.disabled = false;
   btn.textContent = '🔄 重新抓取';
 }
 
 function render() { renderRecs(); renderStats(); renderTable(); }
 
+function getVolBadge(lvl) {
+  var map = {
+    extreme: { cls: 'vol-extreme', txt: '🔥極熱' },
+    hot:     { cls: 'vol-hot', txt: '熱' },
+    warm:    { cls: 'vol-warm', txt: '溫' },
+    normal:  { cls: 'vol-normal', txt: '一般' },
+    low:     { cls: 'vol-low', txt: '💤縮' }
+  };
+  var m = map[lvl] || map.normal;
+  return '<span class="vol-lbl ' + m.cls + '">' + m.txt + '</span>';
+}
+
 function renderRecs() {
   var strong = stockData.filter(function(s){return s.conclusion === '優先候選';}).sort(function(a,b){return b.score - a.score;}).slice(0,5);
   var dt = stockData.filter(function(s){return s.dt;}).sort(function(a,b){return b.score - a.score;}).slice(0,5);
   var warn = stockData.filter(function(s){return s.isWarning && s.changePct >= 0.05;}).sort(function(a,b){return b.changePct - a.changePct;}).slice(0,5);
-  
   document.getElementById('sC').textContent = stockData.filter(function(s){return s.conclusion === '優先候選';}).length + ' 檔';
   document.getElementById('dC').textContent = stockData.filter(function(s){return s.dt;}).length + ' 檔';
   document.getElementById('wC').textContent = stockData.filter(function(s){return s.isWarning && s.changePct >= 0.05;}).length + ' 檔';
-  
   function renderList(arr, id, type) {
     var html = '';
-    if (arr.length === 0) {
-      html = '<div class="rec-empty">今日無符合條件的標的</div>';
-    } else {
+    if (arr.length === 0) html = '<div class="rec-empty">今日無符合條件的標的</div>';
+    else {
       for (var i = 0; i < arr.length; i++) {
         var s = arr[i];
         var rankCls = i===0 ? (type==='warn' ? ' w1' : ' r1') : '';
         var scoreCls = type === 'warn' ? 'w' : 's';
         var meta = s.code + ' · 漲' + (s.changePct*100).toFixed(2) + '%';
         if (type === 'warn') meta += ' · ' + s.warns.join('+');
-        else meta += ' · 離高 ' + (s.highGap*100).toFixed(2) + '%';
+        else meta += ' · 離高 ' + (s.highGap*100).toFixed(2) + '% ' + getVolBadge(s.volLevel);
         html += '<div class="rec-item"><div class="rec-rank' + rankCls + '">' + (i+1) + '</div>';
         html += '<div><div class="rec-name">' + s.name + '</div>';
         html += '<div class="rec-meta">' + meta + '</div></div>';
@@ -416,7 +437,6 @@ function renderRecs() {
     }
     document.getElementById(id).innerHTML = html;
   }
-  
   renderList(strong, 'sList', 'strong');
   renderList(dt, 'dList', 'dt');
   renderList(warn, 'wList', 'warn');
@@ -450,15 +470,11 @@ function renderTable() {
   else if (currentFilter === 'dt') list = list.filter(function(s){return s.dt;});
   else if (currentFilter === 'warn') list = list.filter(function(s){return s.isWarning && s.changePct >= 0.05;});
   else if (currentFilter === 'rise') list = list.filter(function(s){return s.changePct > 0;});
-  else if (currentFilter === 'big') list = list.filter(function(s){return s.changePct >= 0.05;});
-  
-  if (currentFilter === 'warn') {
-    list.sort(function(a,b){return b.changePct - a.changePct;});
-  } else {
-    list.sort(function(a,b){return b.score - a.score;});
-  }
+  else if (currentFilter === 'hot') list = list.filter(function(s){return s.volLevel === 'extreme' || s.volLevel === 'hot';});
+  if (currentFilter === 'warn') list.sort(function(a,b){return b.changePct - a.changePct;});
+  else if (currentFilter === 'hot') list.sort(function(a,b){return b.tradeValue - a.tradeValue;});
+  else list.sort(function(a,b){return b.score - a.score;});
   if (list.length > 300) list = list.slice(0, 300);
-  
   var html = '';
   for (var i = 0; i < list.length; i++) {
     var s = list[i];
@@ -468,16 +484,11 @@ function renderTable() {
     if (s.conclusion === '優先候選') tag = 't-buy';
     else if (s.conclusion === '可觀察') tag = 't-watch';
     else if (s.conclusion === '警示') tag = 't-warn';
-    
     var trCls = '';
     if (s.conclusion === '優先候選') trCls = ' class="pri"';
     else if (s.isWarning && s.changePct >= 0.05) trCls = ' class="warning"';
-    
     var warnLbl = '';
-    if (s.warns.length > 0) {
-      warnLbl = '<span class="warn-lbl">' + s.warns.join('/') + '</span>';
-    }
-    
+    if (s.warns.length > 0) warnLbl = '<span class="warn-lbl">' + s.warns.join('/') + '</span>';
     html += '<tr' + trCls + '>';
     html += '<td class="left"><div class="name">' + s.name + warnLbl + '</div><div class="code">' + s.code + '</div></td>';
     html += '<td>' + s.closingPrice.toFixed(2) + '</td>';
@@ -488,6 +499,7 @@ function renderTable() {
     html += '<td class="pos">' + s.highestPrice.toFixed(2) + '</td>';
     html += '<td class="neg">' + s.lowestPrice.toFixed(2) + '</td>';
     html += '<td>' + fmtVol(s.tradeVolume) + '</td>';
+    html += '<td>' + getVolBadge(s.volLevel) + '</td>';
     html += '<td><span class="score-b ' + getScoreClass(s.score) + '">' + s.score + '</span></td>';
     html += '<td><span class="tag ' + tag + '">' + s.conclusion + '</span></td>';
     html += '<td>' + (s.dt ? '🔥' : '—') + '</td>';
@@ -495,8 +507,7 @@ function renderTable() {
     html += '<td class="pos">' + s.targetPrice.toFixed(2) + '</td>';
     html += '</tr>';
   }
-  
-  if (!html) html = '<tr><td colspan="14" style="text-align:center;padding:40px;color:var(--muted)">無資料，請點重新抓取</td></tr>';
+  if (!html) html = '<tr><td colspan="15" style="text-align:center;padding:40px;color:var(--muted)">無資料，請點重新抓取</td></tr>';
   document.getElementById('tb').innerHTML = html;
 }
 
